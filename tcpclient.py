@@ -11,26 +11,24 @@ def getChoice():
     else:
         return getChoice()
     
-# def generateRoomCode():
 
 
 
 username = input('Enter a username to chat. This name will apppear in the chat: ')
-# choice = getChoice() # 1 join a room 2 create a room
-# roomID = ''
+choice = getChoice() # 1 join a room 2 create a room
+roomID = ''
 
-# if(choice == '1'):
-#     roomID = input("Enter room ID to join: ")
+if(choice == '1'):
+    roomID = input("Enter room ID to join: ")
 
-roomID = input("Room ID you want to enter: ")
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(('192.168.202.21' ,55555))
+client.connect(('127.0.0.1' ,55555))
 def receive():
     while True:
         try:
             message= client.recv(1024).decode('ascii')
             if message == 'key':
-                client.send(f'{roomID}:{username}'.encode('ascii'))
+                client.send(f'{choice}:{roomID}:{username}'.encode('ascii'))
             elif message == 'invalidRoomID':
                 print('No room with that ID')
                 client.close()
@@ -38,14 +36,14 @@ def receive():
             else:
                 print(message) 
         except:
-            print('Error occured!!!')
+            print('You left the chat!')
             client.close()
             break
 
 def write():
     while True:
         message = input("")
-        if(message == 'exit()'):
+        if(message == 'exitroom()'):
             client.close()
             break
         message = f'{username}:{message}'

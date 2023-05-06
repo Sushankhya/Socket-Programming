@@ -2,7 +2,7 @@ import threading
 import socket
 from string import ascii_uppercase
 import random
-host = '192.168.202.21'#'127.0.0.1' #localhost
+host = '127.0.0.1' #localhost
 port = 55555
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -32,6 +32,7 @@ class ChatRoom:
         self.displayAll(f'{leftUsername} has left the chat!'.encode('ascii'))
         self.usernames.pop(index)
 
+rooms = [ChatRoom('GLOBAL')]
 
 def handle(room, client):
     while True:
@@ -42,17 +43,19 @@ def handle(room, client):
             room.removeClient(client)
             break
 
-rooms = [ChatRoom('ABCDE'), ChatRoom('12345')]
 
-def generate_room_ID():
+def generateRoomID():
     while True:
+        match_id = False
         roomid = ''
         for _ in range(5):
             roomid += random.choice(ascii_uppercase)
         for room in rooms:
             if room.roomID == roomid:
+                match_id = True
                 break
-    return roomid
+        if not match_id:
+            return roomid
 
 def getRoomFromID(roomid):
     for room in rooms:
@@ -64,12 +67,13 @@ def receive():
         client, address = server.accept()
         print(f'Connected with {str(address)}')
         client.send('key'.encode('ascii'))
-        roomid, username = client.recv(1024).decode('ascii').split(':')
-
-        # if(choice == '2'):
-        #     newRoomID = generate_room_ID()
-        #     rooms.append(ChatRoom(newRoomID))
-        #     roomid = newRoomID
+        choice, roomid, username = client.recv(1024).decode('ascii').split(':')
+        #choice = 2 means user wants to create a 
+        if(choice == '2'):
+            newRoomID = generateRoomID()
+            rooms.append(ChatRoom(newRoomID))
+            roomid = newRoomID
+            client.send(f'Created room. Room id is {roomid}'.encode('ascii'))
 
         room = getRoomFromID(roomid)
 
