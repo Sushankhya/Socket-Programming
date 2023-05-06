@@ -1,48 +1,85 @@
 import threading
 import socket
-
-host = '192.168.137.1'#'127.0.0.1' #localhost
+from string import ascii_uppercase
+import random
+host = '192.168.202.21'#'127.0.0.1' #localhost
 port = 55555
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((host,port))
 server.listen()
 
-clients = []
-usernames= []
+class ChatRoom:
+    def __init__(self, roomID):
+        self.roomID = roomID
+        self.clients = []
+        self.usernames = []
+    
+    def displayAll(self, message):
+        for client in self.clients:
+            client.send(message)
 
-def displayAll(message):
-    for client in clients:
-        client.send(message)
+    def addClient(self, client, username):
+        self.clients.append(client)
+        self.usernames.append(username)
+        self.displayAll(f'{username} joined the room.'.encode('ascii'))
 
-def handle(client):
+    def removeClient(self, client):
+        index = self.clients.index(client)
+        self.clients.remove(client)
+        client.close()
+        leftUsername = self.usernames[index]
+        self.displayAll(f'{leftUsername} has left the chat!'.encode('ascii'))
+        self.usernames.pop(index)
+
+
+def handle(room, client):
     while True:
         try:
             message = client.recv(1024) #1024 bytes
-            displayAll(message)
+            room.displayAll(message)
         except:
-            index = client.index(client)
-            clients.remove(client)
-            client.close()
-            #getting failed connection of client's index
-            username = usernames[index]
-            displayAll(f'{username} has left the chat!'.encode('ascii'))
-            usernames.remove(username)
+            room.removeClient(client)
             break
+
+rooms = [ChatRoom('ABCDE'), ChatRoom('12345')]
+
+def generate_room_ID():
+    while True:
+        roomid = ''
+        for _ in range(5):
+            roomid += random.choice(ascii_uppercase)
+        for room in rooms:
+            if room.roomID == roomid:
+                break
+    return roomid
+
+def getRoomFromID(roomid):
+    for room in rooms:
+        if room.roomID == roomid:
+            return room
 
 def receive():
     while True:
         client, address = server.accept()
         print(f'Connected with {str(address)}')
         client.send('key'.encode('ascii'))
-        username = client.recv(1024).decode('ascii')
-        clients.append(client)
-        usernames.append(username)
-        print(f'Username of client is {username}')
-        displayAll(f'{username} joined the chat'.encode('ascii'))
-        client.send('Connected to the server'.encode('ascii'))
+        roomid, username = client.recv(1024).decode('ascii').split(':')
 
-        thread = threading.Thread(target=handle,args= (client,))
+        # if(choice == '2'):
+        #     newRoomID = generate_room_ID()
+        #     rooms.append(ChatRoom(newRoomID))
+        #     roomid = newRoomID
+
+        room = getRoomFromID(roomid)
+
+        if(not room):
+            client.send('invalidRoomID'.encode('ascii'))
+            continue
+
+        room.addClient(client, username)
+        print(f'Username of client is {username}: ROOM - {room.roomID}')
+        thread = threading.Thread(target=handle,args= (room, client))
         thread.start()
 
 print('Server is listening')
